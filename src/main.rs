@@ -1,18 +1,20 @@
-use axum::{middleware, routing::get, Extension, Router};
+use axum::{middleware, Extension, Router};
 use tracing::info;
 use dotenvy::dotenv;
 
 mod middlewares;
 mod db;
+mod routes;
+mod handlers;
 
 #[tokio::main]
 async fn main() {
-    dotenv().ok();
+        dotenv().ok();
     tracing_subscriber::fmt::init();
     let db_conn = db::create_db_connection().await;
     info!("Database connection created.");
     let app = Router::new()
-        .route("/", get(|| async { "Hello, Axum" }))
+        .nest("/api/v1", routes::main())
         .layer(middleware::from_fn(middlewares::logger::log_request))
         .layer(Extension(db_conn));
     let port = std::env::var("CHAT_APP_PORT")
