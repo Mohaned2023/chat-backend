@@ -6,10 +6,13 @@ mod middlewares;
 mod db;
 mod routes;
 mod handlers;
+mod modules;
+mod error;
+mod services;
 
 #[tokio::main]
 async fn main() {
-        dotenv().ok();
+    dotenv().ok();
     tracing_subscriber::fmt::init();
     let db_conn = db::create_db_connection().await;
     info!("Database connection created.");
