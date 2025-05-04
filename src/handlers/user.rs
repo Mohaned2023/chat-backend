@@ -12,7 +12,9 @@ use validator::Validate;
 
 use crate::{
     error::AppError, 
-    modules::user::CreateDto, services
+    modules::user::CreateDto,
+    services,
+    utils
 };
 
 
@@ -28,7 +30,20 @@ pub async fn register(
         &pool
     ).await;
     match create_result {
-        Ok(user) => return (StatusCode::CREATED, Json(user)).into_response(),
+        Ok(user) => {
+            let create_session_result = services::session::create(
+                user.id, 
+                &pool
+            ).await;
+            match create_session_result {
+                Ok(session) => return (
+                        StatusCode::CREATED,
+                        utils::create_auth_header(session),
+                        Json(user)
+                    ).into_response(),
+                Err(e) => return e.into_response()
+            }
+        },
         Err(e) => return e.into_response()
     }
 }
