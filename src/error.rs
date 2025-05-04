@@ -7,6 +7,7 @@ pub enum AppError {
     ValidationError(String),
     UserFound,
     InternalServerError,
+    Unauthorized,
 }
 
 impl IntoResponse for AppError {
@@ -14,7 +15,8 @@ impl IntoResponse for AppError {
         let (status, message) = match self {
             AppError::ValidationError(e) => (StatusCode::BAD_REQUEST, e),
             AppError::UserFound => (StatusCode::FOUND, "User found!".to_string()),
-            AppError::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error".to_string())
+            AppError::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error".to_string()),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string())
         };
         let res = Json(json!({
             "message": message,

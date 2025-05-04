@@ -12,7 +12,10 @@ use validator::Validate;
 
 use crate::{
     error::AppError, 
-    modules::user::CreateDto,
+    modules::user::{
+        CreateDto, 
+        LoginDto
+    },
     services,
     utils
 };
@@ -48,7 +51,35 @@ pub async fn register(
     }
 }
 
-pub async fn login() {}
+pub async fn login(
+    Extension(pool): Extension<Pool<Postgres>>,
+    Json(login_dto): Json<LoginDto>
+) -> Response {
+    if let Err(e) = login_dto.validate() {
+        return AppError::ValidationError(e.to_string()).into_response();
+    }
+    let varify_reslt = services::user::login(
+        login_dto, 
+        &pool
+    ).await;
+    match varify_reslt {
+        Ok(user) => { 
+            let create_session_result = services::session::create(
+                user.id, 
+                &pool
+            ).await;
+            match create_session_result {
+                Ok(session) => return (
+                        StatusCode::OK,
+                        utils::create_auth_header(session),
+                        Json(user)
+                    ).into_response(),
+                Err(e) => return e.into_response()
+            }
+        }
+        Err(e) => return e.into_response()
+    }
+}
 
 pub async fn logout() {}
 

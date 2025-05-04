@@ -12,7 +12,11 @@ pub async fn create(
     let session = Uuid::new_v4().to_string();
     let result = sqlx::query(r#"
         INSERT INTO sessions (user_id, session)
-        VALUES ($1, $2);
+        VALUES ($1, $2)
+        ON CONFLICT (user_id) DO UPDATE
+        SET 
+            session = EXCLUDED.session,
+            expires_at = CURRENT_TIMESTAMP + INTERVAL '7 days';
     "#)
         .bind(user_id)
         .bind(&session)

@@ -4,12 +4,20 @@ use argon2::{
         SaltString
     }, 
     Argon2, 
+    PasswordHash, 
     PasswordHasher
 };
 use sqlx::{Pool, Postgres};
 use tracing::error;
 
-use crate::{error::AppError, modules::user::{CreateDto, User}};
+use crate::{
+    error::AppError, 
+    modules::user::{
+        CreateDto, 
+        LoginDto, 
+        User
+    }
+};
 
 
 pub async fn create(
@@ -54,6 +62,50 @@ pub async fn create(
                 error!("{:#?}", db_err);
                 return Err(AppError::InternalServerError);
             }
+            other => {
+                error!("{:#?}", other);
+                return Err(AppError::InternalServerError);
+            }
+        }
+    }
+}
+
+pub async fn login(
+    login_dto: LoginDto,
+    pool: &Pool<Postgres>
+) -> Result<User, AppError> {
+    let result = sqlx::query_as::<_, User>(r#"
+        SELECT 
+            id,
+            name,
+            username,
+            password,
+            email,
+            gender,
+            to_char(create_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as create_at, 
+            to_char(update_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as update_at
+        FROM users
+        WHERE username = $1;
+    "#)
+        .bind(&login_dto.username)
+        .fetch_one(pool)
+        .await;
+    match result {
+        Ok(user) => {
+            if let Ok(parsed_hash) = PasswordHash::new(&user.password) {
+                let verify_result = parsed_hash
+                    .verify_password(
+                        &[&Argon2::default()], 
+                        login_dto.password
+                    );
+                if verify_result.is_ok() {
+                    return Ok(user);
+                }
+            }
+            return Err(AppError::Unauthorized);
+        }
+        Err(e) => match e {
+            sqlx::Error::RowNotFound => return Err(AppError::Unauthorized),
             other => {
                 error!("{:#?}", other);
                 return Err(AppError::InternalServerError);
