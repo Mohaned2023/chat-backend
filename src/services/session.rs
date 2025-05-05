@@ -2,7 +2,10 @@ use sqlx::{Pool, Postgres};
 use uuid::Uuid;
 use tracing::error;
 
-use crate::error::AppError;
+use crate::{
+    error::AppError,
+    modules::user::User
+};
 
 
 pub async fn create(
@@ -45,4 +48,43 @@ pub async fn create(
             }
         }
     }
+}
+
+pub async fn get_user_by_session(
+    session: String,
+    pool: &Pool<Postgres>
+) -> Result<User, AppError> {
+    let user = sqlx::query_as::<_, User>(r#"
+        SELECT 
+            id, 
+            name, 
+            email, 
+            username, 
+            password,
+            gender,
+            to_char(create_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as create_at, 
+            to_char(update_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as update_at
+        FROM users 
+        WHERE
+            users.id = (
+                SELECT user_id FROM sessions
+                WHERE 
+                    sessions.session = $1 AND 
+                    sessions.expires_at - CURRENT_TIMESTAMP > INTERVAL '0 days'
+                LIMIT 1
+            );
+    "#)
+        .bind(&session)
+        .fetch_one(pool)
+        .await;
+    match user {
+        Ok(data) => return Ok(data),
+        Err(err) => match err {
+            sqlx::Error::RowNotFound => return Err(AppError::NotFoundUser),
+            other => {
+                error!("{:#?}", other);
+                return Err(AppError::InternalServerError);
+            }
+        }
+    };
 }
