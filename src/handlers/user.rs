@@ -99,7 +99,22 @@ pub async fn logout(
     }
 }
 
-pub async fn refresh() {}
+pub async fn refresh(
+    Extension(pool): Extension<Pool<Postgres>>,
+    Extension(user): Extension<User>
+) -> Response {
+    let create_session_result = services::session::create(
+        user.id, 
+        &pool
+    ).await;
+    match create_session_result {
+        Ok(session) => return (
+                StatusCode::OK,
+                utils::create_auth_header(session)
+            ).into_response(),
+        Err(err) => return err.into_response()
+    }
+}
 
 pub async fn get_information() {}
 
