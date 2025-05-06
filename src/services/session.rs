@@ -88,3 +88,26 @@ pub async fn get_user_by_session(
         }
     };
 }
+
+pub async fn delete(
+    user_id: i32,
+    pool: &Pool<Postgres>
+) -> Result<(), AppError> {
+    let result = sqlx::query(r#"
+        DELETE FROM sessions
+        WHERE user_id = $1;
+    "#)
+        .bind(user_id)
+        .execute(pool)
+        .await;
+    match result {
+        Ok(_) => return Ok(()),
+        Err(err) => match err {
+            sqlx::Error::RowNotFound => return Ok(()),
+            other => {
+                error!("{:#?}", other);
+                return Err(AppError::InternalServerError);
+            }
+        }
+    }
+}

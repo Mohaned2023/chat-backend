@@ -14,7 +14,8 @@ use crate::{
     error::AppError, 
     modules::user::{
         CreateDto, 
-        LoginDto
+        LoginDto,
+        User
     },
     services,
     utils
@@ -81,7 +82,22 @@ pub async fn login(
     }
 }
 
-pub async fn logout() {}
+pub async fn logout(
+    Extension(pool): Extension<Pool<Postgres>>,
+    Extension(user): Extension<User>
+) -> Response {
+    let delete_session_result = services::session::delete(
+        user.id, 
+        &pool
+    ).await;
+    match delete_session_result {
+        Ok(_) => return (
+                StatusCode::OK, 
+                utils::empty_auth_header()
+            ).into_response(),
+        Err(err) => return err.into_response()
+    }
+}
 
 pub async fn refresh() {}
 
