@@ -15,6 +15,7 @@ use crate::{
     modules::user::{
         CreateDto, 
         LoginDto, 
+        UpdateInfoDto, 
         User
     }
 };
@@ -143,5 +144,62 @@ pub async fn find(
                 return Err(AppError::InternalServerError);
             }
         }
+    }
+}
+
+pub async fn update_information(
+    user: User,
+    update_info_dto: UpdateInfoDto,
+    pool: &Pool<Postgres>
+) -> Result<User, AppError> {
+    if  update_info_dto.name.is_none()     &&
+        update_info_dto.username.is_none() &&
+        update_info_dto.email.is_none()    &&
+        update_info_dto.gender.is_none() {
+        return Err(AppError::BadRequest);
+    }
+    let result = sqlx::query_as::<_, User>(r#"
+        UPDATE users
+        SET
+            name     = $1,
+            username = $2,
+            email    = $3,
+            gender   = $4
+        WHERE 
+            id = $5
+        RETURNING
+            id,
+            name,
+            username,
+            password,
+            email,
+            gender,
+            to_char(create_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as create_at, 
+            to_char(update_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as update_at
+    "#)
+        .bind( & if update_info_dto.name.is_some() { update_info_dto.name.unwrap() } else { user.name })
+        .bind( & if update_info_dto.username.is_some() { update_info_dto.username.unwrap() } else { user.username })
+        .bind( & if update_info_dto.email.is_some() { update_info_dto.email.unwrap() } else { user.email })
+        .bind( & if update_info_dto.gender.is_some() { update_info_dto.gender.unwrap() } else { user.gender })
+        .bind( user.id )
+        .fetch_one(pool)
+        .await;
+    match result {
+        Ok(data) => return Ok(data),
+        Err(err) => match err {
+            sqlx::Error::Database(e) => {
+                if let Some(code) = e.code() {
+                    if code == "23505" {
+                        return Err(AppError::UserFound);
+                    }
+                } 
+                error!("{:#?}", e);
+                return Err(AppError::InternalServerError);
+            }
+            other => {
+                error!("{:#?}", other);
+                return Err(AppError::InternalServerError);
+            }
+        } 
     }
 }
