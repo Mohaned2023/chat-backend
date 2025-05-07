@@ -1,4 +1,5 @@
 use axum::{
+    extract::Path, 
     http::StatusCode, 
     response::{
         IntoResponse, 
@@ -7,6 +8,7 @@ use axum::{
     Extension, 
     Json
 };
+use serde_json::json;
 use sqlx::{Pool, Postgres};
 use validator::Validate;
 
@@ -116,7 +118,32 @@ pub async fn refresh(
     }
 }
 
-pub async fn get_information() {}
+pub async fn get_information(
+    Path(username): Path<String>,
+    Extension(user): Extension<User>,
+    Extension(pool): Extension<Pool<Postgres>>
+) -> Response {
+    if username == user.username {
+        return (StatusCode::OK, Json(user)).into_response();
+    }
+    let find_result = services::user::find(
+        username, 
+        &pool
+    ).await;
+    match find_result {
+        Ok(data) => return (
+                StatusCode::OK,
+                Json(json!({
+                    "id": data.id,
+                    "name": data.name,
+                    "username": data.username,
+                    "gender": data.gender,
+                    "email": data.email
+                }))
+            ).into_response(),
+        Err(err) => return err.into_response()
+    }
+}
 
 pub async fn update_information() {}
 

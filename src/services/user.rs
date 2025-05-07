@@ -113,3 +113,35 @@ pub async fn login(
         }
     }
 }
+
+pub async fn find(
+    username: String,
+    pool: &Pool<Postgres>
+) -> Result<User, AppError> {
+    let result = sqlx::query_as::<_, User>(r#"
+        SELECT 
+            id,
+            name,
+            username,
+            password,
+            email,
+            gender,
+            to_char(create_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as create_at, 
+            to_char(update_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as update_at
+        FROM users
+        WHERE username = $1;
+    "#)
+        .bind(&username)
+        .fetch_one(pool)
+        .await;
+    match result {
+        Ok(user) => return Ok(user),
+        Err(err) => match err {
+            sqlx::Error::RowNotFound => return Err(AppError::NotFoundUser),
+            other => {
+                error!("{:#?}", other);
+                return Err(AppError::InternalServerError);
+            }
+        }
+    }
+}
