@@ -188,4 +188,19 @@ pub async fn update_password(
     }
 }
 
-pub async fn delete() {}
+pub async fn delete(
+    Extension(user): Extension<User>,
+    Extension(pool): Extension<Pool<Postgres>>
+) -> Response {
+    let delete_result = services::user::delete(
+        user, 
+        &pool
+    ).await;
+    match delete_result {
+        Ok(_) => return (
+                StatusCode::OK,
+                utils::empty_auth_header()
+            ).into_response(),
+        Err(err) => return err.into_response()
+    }
+}

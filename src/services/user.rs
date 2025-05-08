@@ -240,3 +240,27 @@ pub async fn update_password(
         }
     }
 }
+
+pub async fn delete(
+    user: User,
+    pool: &Pool<Postgres>
+) -> Result<(), AppError> {
+    let result = sqlx::query(r#"
+        DELETE FROM users
+        WHERE
+            id = $1;
+    "#)
+        .bind(user.id)
+        .execute(pool)
+        .await;
+    match result {
+        Ok(_) => return Ok(()),
+        Err(err) => match err {
+            sqlx::Error::RowNotFound => return Err(AppError::UserFound),
+            other => {
+                error!("{:#?}", other);
+                return Err(AppError::InternalServerError);
+            }
+        }
+    }
+}
