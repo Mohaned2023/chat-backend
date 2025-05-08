@@ -18,6 +18,7 @@ use crate::{
         CreateDto, 
         LoginDto,
         UpdateInfoDto, 
+        UpdatePassDto, 
         User
     },
     services,
@@ -168,6 +169,23 @@ pub async fn update_information(
     }
 }
 
-pub async fn update_password() {}
+pub async fn update_password(
+    Extension(user): Extension<User>,
+    Extension(pool): Extension<Pool<Postgres>>,
+    Json(update_pass_dto): Json<UpdatePassDto>
+) -> Response {
+    if let Err(err) = update_pass_dto.validate() {
+        return AppError::ValidationError(err.to_string()).into_response();
+    }
+    let update_result = services::user::update_password(
+        user, 
+        update_pass_dto, 
+        &pool
+    ).await;
+    match update_result {
+        Ok(_) => return (StatusCode::OK).into_response(),
+        Err(err) => return err.into_response()
+    }
+}
 
 pub async fn delete() {}

@@ -53,6 +53,12 @@ pub struct UpdateInfoDto {
     pub gender: Option<bool>,
 }
 
+#[derive(Validate, Deserialize)]
+pub struct UpdatePassDto {
+    #[validate(custom(function="password_validate"))]
+    pub password: String,
+}
+
 fn username_validate(username: &str) -> Result<(), ValidationError> {
     if username.len() < 3 || username.len() > 50 {
         return Err(ValidationError::new("min=3, max=50"));
