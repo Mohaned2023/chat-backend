@@ -56,3 +56,37 @@ pub async fn create(
         }
     }
 }
+
+pub async fn get_all(
+    user_id: i32,
+    pool: &Pool<Postgres>
+) -> Result<Vec<Conversation>, AppError> {
+    let result = sqlx::query_as::<_, Conversation>(r#"
+        SELECT
+            id,
+            user1_id,
+            user2_id,
+            last_message,
+            to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as created_at, 
+            to_char(updated_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as updated_at
+        FROM conversations
+        WHERE 
+            user1_id = $1 OR
+            user2_id = $1;
+    "#)
+        .bind(user_id)
+        .fetch_all(pool)
+        .await;
+    match result {
+        Ok(conversations) => {
+            if conversations.len() < 1 {
+                return Err(AppError::NotFoundData);
+            }
+            return Ok(conversations)
+        },
+        Err(err) => {
+            error!("{:#?}", err);
+            return Err(AppError::InternalServerError);
+        }
+    }
+}

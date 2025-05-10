@@ -23,6 +23,21 @@ pub async fn create(
     }
 }
 
-pub async fn get_all() {}
+pub async fn get_all(
+    Extension(user): Extension<User>,
+    Extension(pool): Extension<Pool<Postgres>>
+) -> Response {
+    let find_result = services::conversation::get_all(
+        user.id, 
+        &pool
+    ).await;
+    match find_result {
+        Ok(conversations) => return (
+                StatusCode::OK,
+                Json(conversations)
+            ).into_response(),
+        Err(err) => return err.into_response()
+    }
+}
 
 pub async fn delete() {}

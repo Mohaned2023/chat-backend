@@ -10,6 +10,7 @@ pub enum AppError {
     Unauthorized,
     NotFoundUser,
     BadRequest,
+    NotFoundData
 }
 
 impl IntoResponse for AppError {
@@ -20,7 +21,8 @@ impl IntoResponse for AppError {
             AppError::InternalServerError => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error".to_string()),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized".to_string()),
             AppError::NotFoundUser => (StatusCode::NOT_FOUND, "User NOT found!".to_string()),
-            AppError::BadRequest => (StatusCode::BAD_REQUEST, "Bad Request".to_string())
+            AppError::BadRequest => (StatusCode::BAD_REQUEST, "Bad Request".to_string()),
+            AppError::NotFoundData => (StatusCode::NOT_FOUND, "Data NOT found!".to_string())
         };
         let res = Json(json!({
             "message": message,
