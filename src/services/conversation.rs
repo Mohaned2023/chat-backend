@@ -90,3 +90,34 @@ pub async fn get_all(
         }
     }
 }
+
+pub async fn delete(
+    id: i32,
+    user_id: i32,
+    pool: &Pool<Postgres>
+) -> Result<(), AppError> {
+    // delete the conversation only if user1_id == user_id
+    // this means that this user is the creatoer of the conversation.
+    let result = sqlx::query(r#"
+        DELETE FROM conversations
+        WHERE
+            id       = $1 AND
+            user1_id = $2;
+    "#)
+        .bind(id)
+        .bind(user_id)
+        .execute(pool)
+        .await;
+    match result {
+        Ok(data) => {
+            if data.rows_affected() < 1 {
+                return Err(AppError::NotFoundData);
+            }
+            return Ok(());
+        },
+        Err(err) => {
+            error!("{:#?}", err);
+            return Err(AppError::InternalServerError);
+        }
+    }
+}

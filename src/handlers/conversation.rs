@@ -40,4 +40,18 @@ pub async fn get_all(
     }
 }
 
-pub async fn delete() {}
+pub async fn delete(
+    Path(id): Path<i32>,
+    Extension(user): Extension<User>,
+    Extension(pool): Extension<Pool<Postgres>>
+) -> Response {
+    let delete_result = services::conversation::delete(
+        id, 
+        user.id, 
+        &pool
+    ).await;
+    match delete_result {
+        Ok(_) => return (StatusCode::OK).into_response(),
+        Err(err) => return err.into_response()
+    }
+}
