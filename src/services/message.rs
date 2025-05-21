@@ -10,7 +10,16 @@ pub async fn get_all(
     pool: &Pool<Postgres>
 ) -> Result<Vec<Message>, AppError> {
     let result = sqlx::query_as::<_, Message>(r#"
-        SELECT * FROM messages 
+        SELECT 
+            id,
+            sender_username,
+            receiver_username,
+            conversation_id,
+            body,
+            delivered,
+            readed,
+            to_char(created_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') as created_at
+        FROM messages 
         WHERE
             conversation_id = $1 AND (
                 sender_username   = $2 OR
