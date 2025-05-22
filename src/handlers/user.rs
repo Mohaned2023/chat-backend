@@ -46,8 +46,11 @@ pub async fn register(
             match create_session_result {
                 Ok(session) => return (
                         StatusCode::CREATED,
-                        utils::create_auth_header(session),
-                        Json(user)
+                        utils::create_auth_header(session.clone()),
+                        Json(json!({
+                            "session_id": session,
+                            "user": user
+                        }))
                     ).into_response(),
                 Err(e) => return e.into_response()
             }
@@ -76,8 +79,11 @@ pub async fn login(
             match create_session_result {
                 Ok(session) => return (
                         StatusCode::OK,
-                        utils::create_auth_header(session),
-                        Json(user)
+                        utils::create_auth_header(session.clone()),
+                        Json(json!({
+                            "session_id": session,
+                            "user": user
+                        }))
                     ).into_response(),
                 Err(e) => return e.into_response()
             }
